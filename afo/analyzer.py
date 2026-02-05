@@ -154,21 +154,64 @@ class StateAnalyzer:
         # Сформировать рекомендации
         recs = []
         
-        if work_minutes > 90:
+        # рекомендации по времени работы
+        if work_minutes > 120:
+            recs.append("Более 2 часов без перерыва. Обязательно отдохните!")
+        elif work_minutes > 90:
             recs.append("Долгая работа без перерыва. Отдохните 15 минут.")
         elif work_minutes > 50:
             recs.append("Хорошее время для короткого перерыва.")
+        elif work_minutes > 25:
+            recs.append("Отличный темп! Помидорка почти готова 🍅")
         
-        if time_of_day == TimeOfDay.NIGHT and mode in [UserMode.DEEP_WORK, UserMode.RESEARCH]:
-            recs.append("Поздний час. Рекомендуется завершить работу.")
+        # рекомендации по времени суток
+        if time_of_day == TimeOfDay.NIGHT:
+            if mode in [UserMode.DEEP_WORK, UserMode.RESEARCH]:
+                recs.append("Поздний час. Рекомендуется завершить работу.")
+            recs.append("Ночной режим активен — берегите глаза.")
         
-        if time_of_day == TimeOfDay.EVENING and mode == UserMode.DEEP_WORK:
-            recs.append("Включён ночной режим для комфорта глаз.")
+        if time_of_day == TimeOfDay.EVENING:
+            if mode == UserMode.DEEP_WORK:
+                recs.append("Включён ночной режим для комфорта глаз.")
+            if work_minutes > 30:
+                recs.append("Вечер — время замедлиться.")
         
-        if mode == UserMode.ENTERTAINMENT and time_of_day == TimeOfDay.MORNING:
-            recs.append("Утро — продуктивное время для работы.")
+        if time_of_day == TimeOfDay.MORNING:
+            if mode == UserMode.ENTERTAINMENT:
+                recs.append("Утро — продуктивное время для работы.")
+            elif mode == UserMode.DEEP_WORK and work_minutes < 10:
+                recs.append("Отличное начало дня! Утро — пик продуктивности.")
         
-        return recs
+        if time_of_day == TimeOfDay.AFTERNOON:
+            if work_minutes > 0 and work_minutes < 20:
+                recs.append("После обеда бывает спад. Короткая прогулка поможет.")
+        
+        # рекомендации по режиму
+        if mode == UserMode.DEEP_WORK:
+            if work_minutes > 45:
+                recs.append("Не забудьте размяться. Спина скажет спасибо.")
+            if work_minutes > 20:
+                recs.append("Фоновые звуки помогут сохранить концентрацию.")
+        
+        if mode == UserMode.COMMUNICATION:
+            recs.append("Звук приглушён на время общения.")
+        
+        if mode == UserMode.RESEARCH:
+            recs.append("Делайте заметки, пока информация свежая.")
+        
+        if mode == UserMode.CREATIVE:
+            recs.append("Творческий режим — не отвлекайтесь!")
+        
+        if mode == UserMode.ENTERTAINMENT:
+            if time_of_day in [TimeOfDay.MORNING, TimeOfDay.AFTERNOON]:
+                if work_minutes == 0:
+                    recs.append("Планировали поработать сегодня?")
+        
+        if mode == UserMode.IDLE:
+            recs.append("Нет активности. Ушли на перерыв?")
+        
+        # не больше 3 рекомендаций
+        return recs[:3]
     
     def analyze(self, state: ActivityState, break_after_minutes: int = 50) -> AnalysisResult:
         # Провести анализ состояния
