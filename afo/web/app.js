@@ -69,6 +69,7 @@
 
     // Initialize
     function init() {
+        loadTheme();
         cacheElements();
         bindEvents();
         startPolling();
@@ -205,6 +206,43 @@
         
         // загрузить настройки напоминаний
         loadRemindersConfig();
+        
+        // обработчики для выбора темы
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const theme = card.dataset.theme;
+                setTheme(theme);
+            });
+        });
+    }
+
+    // Theme management
+    function loadTheme() {
+        const saved = localStorage.getItem('afo-theme') || 'default';
+        applyTheme(saved);
+    }
+    
+    function setTheme(theme) {
+        applyTheme(theme);
+        localStorage.setItem('afo-theme', theme);
+    }
+    
+    function applyTheme(theme) {
+        // убираем все theme-* классы
+        document.body.className = document.body.className
+            .split(' ')
+            .filter(c => !c.startsWith('theme-'))
+            .join(' ');
+        
+        // добавляем новый если не default
+        if (theme !== 'default') {
+            document.body.classList.add('theme-' + theme);
+        }
+        
+        // обновляем UI карточек
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.classList.toggle('active', card.dataset.theme === theme);
+        });
     }
 
     function navigateTo(page) {

@@ -56,6 +56,45 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    transition: background 0.5s ease;
+}
+
+/* Background themes */
+body.theme-aurora {
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse 100% 80% at 50% 0%, rgba(62, 207, 178, 0.15), transparent),
+        radial-gradient(ellipse 60% 50% at 20% 50%, rgba(139, 92, 246, 0.12), transparent),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(91, 141, 239, 0.1), transparent);
+}
+
+body.theme-sunset {
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse 80% 60% at 70% 0%, rgba(248, 81, 73, 0.12), transparent),
+        radial-gradient(ellipse 60% 50% at 30% 30%, rgba(240, 180, 41, 0.1), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(139, 92, 246, 0.08), transparent);
+}
+
+body.theme-ocean {
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse 100% 60% at 50% 100%, rgba(0, 150, 199, 0.15), transparent),
+        radial-gradient(ellipse 60% 40% at 20% 20%, rgba(91, 141, 239, 0.1), transparent),
+        radial-gradient(ellipse 40% 30% at 80% 50%, rgba(62, 207, 178, 0.08), transparent);
+}
+
+body.theme-forest {
+    background: var(--bg-primary);
+    background-image:
+        radial-gradient(ellipse 80% 50% at 30% 80%, rgba(34, 139, 34, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 70% 20%, rgba(62, 207, 178, 0.1), transparent),
+        radial-gradient(ellipse 40% 30% at 10% 30%, rgba(107, 142, 35, 0.08), transparent);
+}
+
+body.theme-minimal {
+    background: #0a0a0a;
+    background-image: none;
 }
 
 .app {
@@ -1335,4 +1374,94 @@ body {
 
 .toast-close:hover {
     color: var(--text-primary);
+}
+
+/* Theme picker */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.theme-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-card:hover {
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+}
+
+.theme-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(62, 207, 178, 0.2);
+}
+
+.theme-card span {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.theme-card.active span {
+    color: var(--accent);
+}
+
+.theme-preview {
+    width: 100%;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+}
+
+.theme-preview-default {
+    background: #0d1117;
+    background-image:
+        radial-gradient(ellipse 80% 50% at 20% -20%, rgba(62, 207, 178, 0.2), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(91, 141, 239, 0.15), transparent);
+}
+
+.theme-preview-aurora {
+    background: #0d1117;
+    background-image:
+        radial-gradient(ellipse 100% 80% at 50% 0%, rgba(62, 207, 178, 0.3), transparent),
+        radial-gradient(ellipse 60% 50% at 20% 50%, rgba(139, 92, 246, 0.25), transparent),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(91, 141, 239, 0.2), transparent);
+}
+
+.theme-preview-sunset {
+    background: #0d1117;
+    background-image:
+        radial-gradient(ellipse 80% 60% at 70% 0%, rgba(248, 81, 73, 0.25), transparent),
+        radial-gradient(ellipse 60% 50% at 30% 30%, rgba(240, 180, 41, 0.2), transparent),
+        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(139, 92, 246, 0.15), transparent);
+}
+
+.theme-preview-ocean {
+    background: #0d1117;
+    background-image:
+        radial-gradient(ellipse 100% 60% at 50% 100%, rgba(0, 150, 199, 0.3), transparent),
+        radial-gradient(ellipse 60% 40% at 20% 20%, rgba(91, 141, 239, 0.2), transparent),
+        radial-gradient(ellipse 40% 30% at 80% 50%, rgba(62, 207, 178, 0.15), transparent);
+}
+
+.theme-preview-forest {
+    background: #0d1117;
+    background-image:
+        radial-gradient(ellipse 80% 50% at 30% 80%, rgba(34, 139, 34, 0.25), transparent),
+        radial-gradient(ellipse 60% 40% at 70% 20%, rgba(62, 207, 178, 0.2), transparent),
+        radial-gradient(ellipse 40% 30% at 10% 30%, rgba(107, 142, 35, 0.15), transparent);
+}
+
+.theme-preview-minimal {
+    background: #0a0a0a;
 }
