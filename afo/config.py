@@ -64,6 +64,65 @@ class TrackingSettings:
     idle_threshold_seconds: int = 180
 
 
+@dataclass
+class ReminderItem:
+    # одно напоминание - вода, разминка или кастомное
+    id: str = ""
+    name: str = ""
+    enabled: bool = True
+    interval_minutes: int = 30
+    message: str = ""
+    icon: str = "bell"  # bootstrap icon name
+
+
+@dataclass 
+class ReminderSettings:
+    # настройки напоминалок
+    enabled: bool = True
+    
+    # предустановленные напоминания
+    water: ReminderItem = None
+    stretch: ReminderItem = None
+    eyes: ReminderItem = None
+    
+    # кастомные напоминания юзера
+    custom: List['ReminderItem'] = None
+    
+    # не показывать напоминания когда idle
+    pause_when_idle: bool = True
+    
+    def __post_init__(self):
+        if self.water is None:
+            self.water = ReminderItem(
+                id='water',
+                name='Вода',
+                enabled=True,
+                interval_minutes=30,
+                message='Выпей стакан воды 💧',
+                icon='droplet'
+            )
+        if self.stretch is None:
+            self.stretch = ReminderItem(
+                id='stretch',
+                name='Разминка',
+                enabled=True,
+                interval_minutes=45,
+                message='Потянись и разомнись 🧘',
+                icon='person-arms-up'
+            )
+        if self.eyes is None:
+            self.eyes = ReminderItem(
+                id='eyes',
+                name='Глаза',
+                enabled=False,
+                interval_minutes=20,
+                message='Посмотри вдаль 20 секунд 👀',
+                icon='eye'
+            )
+        if self.custom is None:
+            self.custom = []
+
+
 @dataclass 
 class Config:
     sound: SoundSettings = None
@@ -71,6 +130,7 @@ class Config:
     notifications: NotificationSettings = None
     breaks: BreakSettings = None
     tracking: TrackingSettings = None
+    reminders: ReminderSettings = None
     blocked_sites: List[str] = None
     work_apps: List[str] = None
     entertainment_apps: List[str] = None
@@ -86,6 +146,8 @@ class Config:
             self.breaks = BreakSettings()
         if self.tracking is None:
             self.tracking = TrackingSettings()
+        if self.reminders is None:
+            self.reminders = ReminderSettings()
         if self.blocked_sites is None:
             self.blocked_sites = [
                 'youtube.com', 'twitter.com', 'x.com', 'reddit.com', 'tiktok.com', 
@@ -184,12 +246,24 @@ class ConfigManager:
     
     def _dict_to_config(self, data: dict) -> Config:
         # Преобразовать словарь в конфиг
+        # для напоминаний нужна отдельная логика т.к. там вложенные dataclass'ы
+        reminders_data = data.get('reminders', {})
+        reminders = ReminderSettings(
+            enabled=reminders_data.get('enabled', True),
+            water=ReminderItem(**reminders_data.get('water', {})) if reminders_data.get('water') else None,
+            stretch=ReminderItem(**reminders_data.get('stretch', {})) if reminders_data.get('stretch') else None,
+            eyes=ReminderItem(**reminders_data.get('eyes', {})) if reminders_data.get('eyes') else None,
+            custom=[ReminderItem(**r) for r in reminders_data.get('custom', [])],
+            pause_when_idle=reminders_data.get('pause_when_idle', True)
+        )
+        
         return Config(
             sound=SoundSettings(**data.get('sound', {})),
             display=DisplaySettings(**data.get('display', {})),
             notifications=NotificationSettings(**data.get('notifications', {})),
             breaks=BreakSettings(**data.get('breaks', {})),
             tracking=TrackingSettings(**data.get('tracking', {})),
+            reminders=reminders,
             blocked_sites=data.get('blocked_sites'),
             work_apps=data.get('work_apps'),
             entertainment_apps=data.get('entertainment_apps')
@@ -203,6 +277,7 @@ class ConfigManager:
             'notifications': asdict(self.config.notifications),
             'breaks': asdict(self.config.breaks),
             'tracking': asdict(self.config.tracking),
+            'reminders': asdict(self.config.reminders),
             'blocked_sites': self.config.blocked_sites,
             'work_apps': self.config.work_apps,
             'entertainment_apps': self.config.entertainment_apps

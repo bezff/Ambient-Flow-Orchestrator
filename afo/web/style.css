@@ -1156,3 +1156,183 @@ body {
     box-shadow: 0 0 20px rgba(62, 207, 178, 0.5);
     transition: width 1s linear;
 }
+
+/* ===================
+   Напоминания (Reminders)
+   =================== */
+
+/* Настройки напоминаний */
+.reminder-setting {
+    background: var(--bg-hover);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.reminder-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.reminder-header i {
+    font-size: 20px;
+    color: var(--accent);
+}
+
+.reminder-header span {
+    flex: 1;
+    font-weight: 500;
+}
+
+.reminder-interval {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 32px;
+}
+
+.reminder-interval label {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.reminder-interval-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.reminder-interval-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.toggle-small {
+    transform: scale(0.85);
+}
+
+/* Toast уведомления */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast {
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    min-width: 320px;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    pointer-events: auto;
+    animation: toastSlideIn 0.3s ease-out;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.toast.hiding {
+    animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes toastSlideOut {
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+.toast-icon {
+    font-size: 28px;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.toast-message {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.toast-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.toast-btn {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.toast-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+}
+
+.toast-btn-dismiss {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+}
+
+.toast-btn-dismiss:hover {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-primary);
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    margin: -8px -8px -8px 0;
+    transition: var(--transition);
+}
+
+.toast-close:hover {
+    color: var(--text-primary);
+}

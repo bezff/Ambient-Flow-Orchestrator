@@ -19,7 +19,9 @@ When working at a computer, you want everything to be just right: the right back
 - Plays ambient sounds (rain, cafe, noise) when you need to focus
 - Switches screen to warm mode in the evening
 - Reminds you to take breaks
+- Health reminders — water, stretching, eye rest
 - Auto-start with Windows (configurable in the app)
+
 
 ## Installation
 
@@ -49,6 +51,9 @@ In the app settings there's an "Auto-start" toggle — it will add AFO to Window
 | POST | /api/sound | sound control |
 | POST | /api/break | start break |
 | GET/POST | /api/autostart | autostart |
+| GET/POST | /api/reminders | reminder settings |
+| POST | /api/reminders/snooze | snooze reminder |
+| POST | /api/reminders/dismiss | mark as done (reset timer) |
 
 ## License
 

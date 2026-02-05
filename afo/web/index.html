@@ -329,6 +329,92 @@
                     </div>
                     
                     <div class="settings-section">
+                        <h3>Напоминания о здоровье</h3>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span class="setting-label">Включить напоминания</span>
+                                <span class="setting-desc">Вода, разминка, отдых для глаз</span>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="settingRemindersEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span class="setting-label">Пауза при бездействии</span>
+                                <span class="setting-desc">Не показывать когда нет активности</span>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="settingRemindersPauseIdle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <!-- Вода -->
+                        <div class="reminder-setting" data-reminder="water">
+                            <div class="reminder-header">
+                                <i class="bi bi-droplet"></i>
+                                <span>Вода</span>
+                                <label class="toggle toggle-small">
+                                    <input type="checkbox" class="reminder-toggle" data-id="water" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="reminder-interval">
+                                <label>Интервал:</label>
+                                <select class="reminder-interval-select" data-id="water">
+                                    <option value="15">15 мин</option>
+                                    <option value="30" selected>30 мин</option>
+                                    <option value="45">45 мин</option>
+                                    <option value="60">1 час</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Разминка -->
+                        <div class="reminder-setting" data-reminder="stretch">
+                            <div class="reminder-header">
+                                <i class="bi bi-person-arms-up"></i>
+                                <span>Разминка</span>
+                                <label class="toggle toggle-small">
+                                    <input type="checkbox" class="reminder-toggle" data-id="stretch" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="reminder-interval">
+                                <label>Интервал:</label>
+                                <select class="reminder-interval-select" data-id="stretch">
+                                    <option value="30">30 мин</option>
+                                    <option value="45" selected>45 мин</option>
+                                    <option value="60">1 час</option>
+                                    <option value="90">1.5 часа</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Глаза -->
+                        <div class="reminder-setting" data-reminder="eyes">
+                            <div class="reminder-header">
+                                <i class="bi bi-eye"></i>
+                                <span>Отдых для глаз</span>
+                                <label class="toggle toggle-small">
+                                    <input type="checkbox" class="reminder-toggle" data-id="eyes">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="reminder-interval">
+                                <label>Интервал:</label>
+                                <select class="reminder-interval-select" data-id="eyes">
+                                    <option value="20" selected>20 мин</option>
+                                    <option value="30">30 мин</option>
+                                    <option value="45">45 мин</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
                         <h3>Система</h3>
                         <div class="setting-row" id="autostartRow">
                             <div class="setting-info">
@@ -358,6 +444,9 @@
         </div>
         <div class="break-progress" id="breakProgress"></div>
     </div>
+    
+    <!-- Контейнер для напоминаний (toast) -->
+    <div class="toast-container" id="toastContainer"></div>
     
     <script src="app.js"></script>
 </body>

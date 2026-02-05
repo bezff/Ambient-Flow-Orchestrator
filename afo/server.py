@@ -12,6 +12,7 @@ from .tracker import ActivityTracker, ActivityState
 from .analyzer import StateAnalyzer, AnalysisResult
 from .environment import EnvironmentController, AmbientSound
 from .config import ConfigManager
+from .reminders import ReminderManager
 from . import autostart
 
 
@@ -30,6 +31,9 @@ class APIHandler(SimpleHTTPRequestHandler):
             '/api/mode': self.handle_mode,
             '/api/break': self.handle_break,
             '/api/autostart': self.handle_autostart,
+            '/api/reminders': self.handle_reminders,
+            '/api/reminders/snooze': self.handle_reminder_snooze,
+            '/api/reminders/dismiss': self.handle_reminder_dismiss,
         }
         super().__init__(*args, **kwargs)
     
@@ -164,8 +168,13 @@ class APIHandler(SimpleHTTPRequestHandler):
                 'night_mode': orch.environment.state.night_mode_active,
                 'focus_mode': orch.environment.state.focus_mode,
                 'notifications_filtered': orch.environment.state.notifications_filtered,
-            }
+            },
+            # напоминания которые надо показать юзеру
+            'pending_reminders': orch._pending_reminders.copy()
         }
+        
+        # очищаем после отправки (юзер их увидел)
+        orch._pending_reminders.clear()
         
         if orch._last_analysis:
             status['analysis'] = {
@@ -306,6 +315,103 @@ class APIHandler(SimpleHTTPRequestHandler):
                 'enabled': autostart.is_autostart_enabled(),
                 'available': bool(autostart.get_exe_path())
             })
+    
+    def handle_reminders(self, method: str, params: Dict):
+        # получить/обновить настройки напоминаний
+        orch = self.orchestrator
+        
+        if method == 'GET':
+            # возвращаем статус + настройки
+            status = orch.reminders.get_status()
+            config = orch.config.config.reminders
+            
+            self.send_json({
+                **status,
+                'pause_when_idle': config.pause_when_idle
+            })
+        else:
+            # POST - обновляем настройки
+            # можно передать enabled (общий флаг) или настройки конкретного напоминания
+            
+            if 'enabled' in params:
+                orch.config.config.reminders.enabled = params['enabled']
+            
+            if 'pause_when_idle' in params:
+                orch.config.config.reminders.pause_when_idle = params['pause_when_idle']
+            
+            # обновление конкретного напоминания по id
+            if 'reminder_id' in params:
+                rid = params['reminder_id']
+                settings = orch.config.config.reminders
+                
+                # ищем напоминание
+                target = None
+                if settings.water and settings.water.id == rid:
+                    target = settings.water
+                elif settings.stretch and settings.stretch.id == rid:
+                    target = settings.stretch
+                elif settings.eyes and settings.eyes.id == rid:
+                    target = settings.eyes
+                else:
+                    for r in settings.custom:
+                        if r.id == rid:
+                            target = r
+                            break
+                
+                if target:
+                    if 'reminder_enabled' in params:
+                        target.enabled = params['reminder_enabled']
+                    if 'interval_minutes' in params:
+                        target.interval_minutes = params['interval_minutes']
+                    if 'message' in params:
+                        target.message = params['message']
+            
+            # добавление кастомного напоминания
+            if 'add_custom' in params:
+                custom = params['add_custom']
+                orch.reminders.add_custom_reminder(
+                    name=custom.get('name', 'Напоминание'),
+                    interval_minutes=custom.get('interval_minutes', 30),
+                    message=custom.get('message', ''),
+                    icon=custom.get('icon', 'bell')
+                )
+            
+            # удаление кастомного
+            if 'remove_custom' in params:
+                orch.reminders.remove_custom_reminder(params['remove_custom'])
+            
+            # сохраняем и обновляем менеджер
+            orch.config.save()
+            orch.reminders.update_settings(orch.config.config.reminders)
+            
+            self.send_json({'success': True})
+    
+    def handle_reminder_snooze(self, method: str, params: Dict):
+        # отложить напоминание
+        if method == 'POST':
+            reminder_id = params.get('id')
+            minutes = params.get('minutes', 10)
+            
+            if reminder_id:
+                self.orchestrator.reminders.snooze(reminder_id, minutes)
+                self.send_json({'success': True})
+            else:
+                self.send_json({'error': 'id required'}, 400)
+        else:
+            self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_reminder_dismiss(self, method: str, params: Dict):
+        # сбросить напоминание (типа выполнил)
+        if method == 'POST':
+            reminder_id = params.get('id')
+            
+            if reminder_id:
+                self.orchestrator.reminders.dismiss(reminder_id)
+                self.send_json({'success': True})
+            else:
+                self.send_json({'error': 'id required'}, 400)
+        else:
+            self.send_json({'error': 'POST only'}, 405)
 
 
 class WebServer:
@@ -351,9 +457,33 @@ class Orchestrator:
         self.environment = EnvironmentController(self.config.config)
         self.server = WebServer(self)
         
+        # напоминалки - проверяем idle через трекер
+        self.reminders = ReminderManager(
+            settings=self.config.config.reminders,
+            is_idle_callback=lambda: self.tracker.state.is_idle
+        )
+        
+        # очередь напоминаний для UI (SSE можно будет потом прикрутить)
+        self._pending_reminders = []
+        self.reminders.add_listener(self._on_reminder)
+        
         self.running = False
         self._last_analysis: Optional[AnalysisResult] = None
         self._analysis_thread: Optional[threading.Thread] = None
+    
+    def _on_reminder(self, reminder):
+        # колбэк когда пора показать напоминание
+        # пока просто складываем в очередь, UI будет поллить
+        self._pending_reminders.append({
+            'id': reminder.id,
+            'name': reminder.name,
+            'message': reminder.message,
+            'icon': reminder.icon,
+            'timestamp': __import__('time').time()
+        })
+        # держим макс 5 штук в очереди
+        if len(self._pending_reminders) > 5:
+            self._pending_reminders.pop(0)
     
     def _analysis_loop(self):
         # Цикл анализа
@@ -383,6 +513,7 @@ class Orchestrator:
         # Запустить компоненты
         self.tracker.start()
         self.server.start()
+        self.reminders.start()
         
         # Запустить цикл анализа
         self._analysis_thread = threading.Thread(target=self._analysis_loop, daemon=True)
@@ -394,6 +525,7 @@ class Orchestrator:
         
         self.tracker.stop()
         self.server.stop()
+        self.reminders.stop()
         self.environment.reset()
         
         if self._analysis_thread:

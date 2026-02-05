@@ -18,6 +18,7 @@
         status: null,
         stats: null,
         config: null,
+        remindersConfig: null,
         currentSound: 'none',
         breakActive: false,
         breakTimer: null,
@@ -151,7 +152,9 @@
             'settingNightMode': (v) => updateConfig('display', { night_mode_enabled: v }),
             'settingBreaksEnabled': (v) => updateConfig('breaks', { enabled: v }),
             'settingNotifFilter': (v) => updateConfig('notifications', { filter_enabled: v }),
-            'settingAutostart': (v) => setAutostart(v)
+            'settingAutostart': (v) => setAutostart(v),
+            'settingRemindersEnabled': (v) => updateReminders({ enabled: v }),
+            'settingRemindersPauseIdle': (v) => updateReminders({ pause_when_idle: v })
         };
 
         Object.keys(settingHandlers).forEach(id => {
@@ -175,8 +178,33 @@
             });
         }
         
+        // обработчики для напоминаний - включение/выключение
+        document.querySelectorAll('.reminder-toggle').forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                const reminderId = e.target.dataset.id;
+                updateReminders({
+                    reminder_id: reminderId,
+                    reminder_enabled: e.target.checked
+                });
+            });
+        });
+        
+        // обработчики для интервалов напоминаний
+        document.querySelectorAll('.reminder-interval-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const reminderId = e.target.dataset.id;
+                updateReminders({
+                    reminder_id: reminderId,
+                    interval_minutes: parseInt(e.target.value)
+                });
+            });
+        });
+        
         // Загрузить статус автозагрузки
         loadAutostartStatus();
+        
+        // загрузить настройки напоминаний
+        loadRemindersConfig();
     }
 
     function navigateTo(page) {
@@ -297,6 +325,144 @@
 
     async function startBreak() {
         await fetchAPI('/api/break', { method: 'POST' });
+    }
+
+    // =============================
+    // Напоминания (Reminders)
+    // =============================
+    
+    async function loadRemindersConfig() {
+        const data = await fetchAPI('/api/reminders');
+        if (data) {
+            state.remindersConfig = data;
+            updateRemindersUI();
+        }
+    }
+    
+    async function updateReminders(params) {
+        await fetchAPI('/api/reminders', {
+            method: 'POST',
+            body: JSON.stringify(params)
+        });
+        // перезагружаем конфиг чтоб UI обновился
+        loadRemindersConfig();
+    }
+    
+    async function snoozeReminder(reminderId, minutes = 10) {
+        await fetchAPI('/api/reminders/snooze', {
+            method: 'POST',
+            body: JSON.stringify({ id: reminderId, minutes })
+        });
+    }
+    
+    async function dismissReminder(reminderId) {
+        await fetchAPI('/api/reminders/dismiss', {
+            method: 'POST',
+            body: JSON.stringify({ id: reminderId })
+        });
+    }
+    
+    function updateRemindersUI() {
+        const config = state.remindersConfig;
+        if (!config) return;
+        
+        // общие переключатели
+        const enabledEl = document.getElementById('settingRemindersEnabled');
+        const pauseIdleEl = document.getElementById('settingRemindersPauseIdle');
+        
+        if (enabledEl) enabledEl.checked = config.enabled;
+        if (pauseIdleEl) pauseIdleEl.checked = config.pause_when_idle;
+        
+        // обновляем состояние каждого напоминания
+        config.reminders?.forEach(reminder => {
+            const toggle = document.querySelector(`.reminder-toggle[data-id="${reminder.id}"]`);
+            const interval = document.querySelector(`.reminder-interval-select[data-id="${reminder.id}"]`);
+            
+            if (toggle) toggle.checked = reminder.enabled;
+            if (interval) interval.value = reminder.interval_minutes;
+        });
+    }
+    
+    function showReminderToast(reminder) {
+        // создаём toast для напоминания
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.dataset.reminderId = reminder.id;
+        
+        // иконки для разных типов
+        const iconMap = {
+            'droplet': 'bi-droplet-fill',
+            'person-arms-up': 'bi-person-arms-up',
+            'eye': 'bi-eye',
+            'bell': 'bi-bell'
+        };
+        const iconClass = iconMap[reminder.icon] || 'bi-bell';
+        
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="bi ${iconClass}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${reminder.name}</div>
+                <div class="toast-message">${reminder.message}</div>
+                <div class="toast-actions">
+                    <button class="toast-btn toast-btn-done" data-id="${reminder.id}">Готово</button>
+                    <button class="toast-btn toast-btn-dismiss toast-btn-snooze" data-id="${reminder.id}">Через 10 мин</button>
+                </div>
+            </div>
+            <button class="toast-close" aria-label="Закрыть">&times;</button>
+        `;
+        
+        // обработчики кнопок
+        toast.querySelector('.toast-btn-done').addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            await dismissReminder(id);
+            closeToast(toast);
+        });
+        
+        toast.querySelector('.toast-btn-snooze').addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            await snoozeReminder(id, 10);
+            closeToast(toast);
+        });
+        
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+            closeToast(toast);
+        });
+        
+        container.appendChild(toast);
+        
+        // звук если включён
+        playNotificationSound();
+        
+        // автоскрытие через 30 сек
+        setTimeout(() => {
+            if (toast.parentNode) {
+                closeToast(toast);
+            }
+        }, 30000);
+    }
+    
+    function closeToast(toast) {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }
+    
+    function playNotificationSound() {
+        // можно добавить звук уведомления
+        // пока просто пропускаем
+    }
+    
+    function handlePendingReminders(reminders) {
+        // показываем toast для каждого пришедшего напоминания
+        if (!reminders || !reminders.length) return;
+        
+        reminders.forEach(reminder => {
+            showReminderToast(reminder);
+        });
     }
 
     function startBreakMode() {
@@ -478,6 +644,11 @@
 
             // Не перезаписываем currentSound с сервера - звук играет локально
             updateSoundCards();
+        }
+        
+        // обработка входящих напоминаний
+        if (status.pending_reminders && status.pending_reminders.length > 0) {
+            handlePendingReminders(status.pending_reminders);
         }
     }
 
