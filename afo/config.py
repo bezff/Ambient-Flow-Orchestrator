@@ -75,6 +75,15 @@ class ReminderItem:
     icon: str = "bell"  # bootstrap icon name
 
 
+@dataclass
+class ProcrastinationSettings:
+    enabled: bool = True
+    work_hours_start: str = "09:00"
+    work_hours_end: str = "18:00"
+    warning_threshold_minutes: int = 15
+    cooldown_minutes: int = 20
+
+
 @dataclass 
 class ReminderSettings:
     # настройки напоминалок
@@ -131,6 +140,7 @@ class Config:
     breaks: BreakSettings = None
     tracking: TrackingSettings = None
     reminders: ReminderSettings = None
+    procrastination: ProcrastinationSettings = None
     blocked_sites: List[str] = None
     work_apps: List[str] = None
     entertainment_apps: List[str] = None
@@ -148,6 +158,8 @@ class Config:
             self.tracking = TrackingSettings()
         if self.reminders is None:
             self.reminders = ReminderSettings()
+        if self.procrastination is None:
+            self.procrastination = ProcrastinationSettings()
         if self.blocked_sites is None:
             self.blocked_sites = [
                 'youtube.com', 'twitter.com', 'x.com', 'reddit.com', 'tiktok.com', 
@@ -264,6 +276,7 @@ class ConfigManager:
             breaks=BreakSettings(**data.get('breaks', {})),
             tracking=TrackingSettings(**data.get('tracking', {})),
             reminders=reminders,
+            procrastination=ProcrastinationSettings(**data.get('procrastination', {})),
             blocked_sites=data.get('blocked_sites'),
             work_apps=data.get('work_apps'),
             entertainment_apps=data.get('entertainment_apps')
@@ -278,6 +291,7 @@ class ConfigManager:
             'breaks': asdict(self.config.breaks),
             'tracking': asdict(self.config.tracking),
             'reminders': asdict(self.config.reminders),
+            'procrastination': asdict(self.config.procrastination),
             'blocked_sites': self.config.blocked_sites,
             'work_apps': self.config.work_apps,
             'entertainment_apps': self.config.entertainment_apps

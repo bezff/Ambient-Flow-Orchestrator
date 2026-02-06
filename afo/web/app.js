@@ -19,6 +19,7 @@
         stats: null,
         config: null,
         remindersConfig: null,
+        procrastinationConfig: null,
         currentSound: 'none',
         breakActive: false,
         breakTimer: null,
@@ -207,6 +208,39 @@
         // загрузить настройки напоминаний
         loadRemindersConfig();
         
+        // загрузить настройки прокрастинации
+        loadProcrastinationConfig();
+        
+        // обработчики для прокрастинации
+        const procrastEnabled = document.getElementById('settingProcrastEnabled');
+        if (procrastEnabled) {
+            procrastEnabled.addEventListener('change', (e) => {
+                updateProcrastination({ enabled: e.target.checked });
+            });
+        }
+        
+        const workStart = document.getElementById('settingWorkStart');
+        const workEnd = document.getElementById('settingWorkEnd');
+        
+        if (workStart) {
+            workStart.addEventListener('change', (e) => {
+                updateProcrastination({ work_hours_start: e.target.value });
+            });
+        }
+        
+        if (workEnd) {
+            workEnd.addEventListener('change', (e) => {
+                updateProcrastination({ work_hours_end: e.target.value });
+            });
+        }
+        
+        const procrastThreshold = document.getElementById('settingProcrastThreshold');
+        if (procrastThreshold) {
+            procrastThreshold.addEventListener('change', (e) => {
+                updateProcrastination({ warning_threshold_minutes: parseInt(e.target.value) });
+            });
+        }
+        
         // обработчики для выбора темы
         document.querySelectorAll('.theme-card').forEach(card => {
             card.addEventListener('click', () => {
@@ -384,6 +418,41 @@
         });
         // перезагружаем конфиг чтоб UI обновился
         loadRemindersConfig();
+    }
+    
+    // =============================
+    // Прокрастинация
+    // =============================
+    
+    async function loadProcrastinationConfig() {
+        const data = await fetchAPI('/api/procrastination');
+        if (data) {
+            state.procrastinationConfig = data;
+            updateProcrastinationUI();
+        }
+    }
+    
+    async function updateProcrastination(params) {
+        await fetchAPI('/api/procrastination', {
+            method: 'POST',
+            body: JSON.stringify(params)
+        });
+        loadProcrastinationConfig();
+    }
+    
+    function updateProcrastinationUI() {
+        const config = state.procrastinationConfig;
+        if (!config) return;
+        
+        const enabled = document.getElementById('settingProcrastEnabled');
+        const workStart = document.getElementById('settingWorkStart');
+        const workEnd = document.getElementById('settingWorkEnd');
+        const threshold = document.getElementById('settingProcrastThreshold');
+        
+        if (enabled) enabled.checked = config.enabled;
+        if (workStart) workStart.value = config.work_hours_start;
+        if (workEnd) workEnd.value = config.work_hours_end;
+        if (threshold) threshold.value = config.warning_threshold_minutes;
     }
     
     async function snoozeReminder(reminderId, minutes = 10) {

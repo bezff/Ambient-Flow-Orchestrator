@@ -415,6 +415,44 @@
                     </div>
                     
                     <div class="settings-section">
+                        <h3>Прокрастинация</h3>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span class="setting-label">Детекция прокрастинации</span>
+                                <span class="setting-desc">Предупреждать о развлечениях в рабочее время</span>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="settingProcrastEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span class="setting-label">Рабочие часы</span>
+                                <span class="setting-desc">Когда включена детекция</span>
+                            </div>
+                            <div class="time-range">
+                                <input type="time" id="settingWorkStart" value="09:00">
+                                <span>—</span>
+                                <input type="time" id="settingWorkEnd" value="18:00">
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span class="setting-label">Порог предупреждения</span>
+                                <span class="setting-desc">Минут в развлечениях до напоминания</span>
+                            </div>
+                            <select id="settingProcrastThreshold">
+                                <option value="5">5 минут</option>
+                                <option value="10">10 минут</option>
+                                <option value="15" selected>15 минут</option>
+                                <option value="20">20 минут</option>
+                                <option value="30">30 минут</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
                         <h3>Оформление</h3>
                         <div class="setting-row">
                             <div class="setting-info">

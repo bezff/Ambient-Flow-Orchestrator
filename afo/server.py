@@ -34,6 +34,7 @@ class APIHandler(SimpleHTTPRequestHandler):
             '/api/reminders': self.handle_reminders,
             '/api/reminders/snooze': self.handle_reminder_snooze,
             '/api/reminders/dismiss': self.handle_reminder_dismiss,
+            '/api/procrastination': self.handle_procrastination,
         }
         super().__init__(*args, **kwargs)
     
@@ -184,6 +185,11 @@ class APIHandler(SimpleHTTPRequestHandler):
                 'work_minutes': orch._last_analysis.work_session_minutes,
                 'should_break': orch._last_analysis.should_take_break,
                 'recommendations': orch._last_analysis.recommendations,
+                'procrastination': {
+                    'active': orch._last_analysis.procrastination.active,
+                    'entertainment_minutes': orch._last_analysis.procrastination.entertainment_minutes,
+                    'message': orch._last_analysis.procrastination.message,
+                }
             }
         
         self.send_json(status)
@@ -412,6 +418,44 @@ class APIHandler(SimpleHTTPRequestHandler):
                 self.send_json({'error': 'id required'}, 400)
         else:
             self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_procrastination(self, method: str, params: Dict):
+        orch = self.orchestrator
+        
+        if method == 'GET':
+            p = orch.config.config.procrastination
+            self.send_json({
+                'enabled': p.enabled,
+                'work_hours_start': p.work_hours_start,
+                'work_hours_end': p.work_hours_end,
+                'warning_threshold_minutes': p.warning_threshold_minutes,
+                'cooldown_minutes': p.cooldown_minutes
+            })
+        else:
+            p = orch.config.config.procrastination
+            
+            if 'enabled' in params:
+                p.enabled = params['enabled']
+            if 'work_hours_start' in params:
+                p.work_hours_start = params['work_hours_start']
+            if 'work_hours_end' in params:
+                p.work_hours_end = params['work_hours_end']
+            if 'warning_threshold_minutes' in params:
+                p.warning_threshold_minutes = params['warning_threshold_minutes']
+            if 'cooldown_minutes' in params:
+                p.cooldown_minutes = params['cooldown_minutes']
+            
+            orch.config.save()
+            
+            orch.analyzer.set_procrastination_settings(
+                enabled=p.enabled,
+                work_start=p.work_hours_start,
+                work_end=p.work_hours_end,
+                threshold_minutes=p.warning_threshold_minutes,
+                cooldown_minutes=p.cooldown_minutes
+            )
+            
+            self.send_json({'success': True})
 
 
 class WebServer:
@@ -466,6 +510,34 @@ class Orchestrator:
         # очередь напоминаний для UI (SSE можно будет потом прикрутить)
         self._pending_reminders = []
         self.reminders.add_listener(self._on_reminder)
+        
+        # настройки прокрастинации
+        p = self.config.config.procrastination
+        self.analyzer.set_procrastination_settings(
+            enabled=p.enabled,
+            work_start=p.work_hours_start,
+            work_end=p.work_hours_end,
+            threshold_minutes=p.warning_threshold_minutes,
+            cooldown_minutes=p.cooldown_minutes
+        )
+        self.analyzer.set_warning_callback(self._on_procrastination_warning)
+        
+        self.running = False
+        self._last_analysis: Optional[AnalysisResult] = None
+        self._analysis_thread: Optional[threading.Thread] = None
+    
+    def _on_procrastination_warning(self, message: str, minutes: int):
+        self._pending_reminders.append({
+            'id': 'procrastination',
+            'name': 'Прокрастинация',
+            'message': message,
+            'icon': 'exclamation-triangle',
+            'timestamp': __import__('time').time(),
+            'type': 'procrastination',
+            'entertainment_minutes': minutes
+        })
+        if len(self._pending_reminders) > 5:
+            self._pending_reminders.pop(0)
         
         self.running = False
         self._last_analysis: Optional[AnalysisResult] = None

@@ -991,6 +991,45 @@ body.theme-minimal {
     box-shadow: 0 0 0 3px rgba(62, 207, 178, 0.15);
 }
 
+.time-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-range span {
+    color: var(--text-secondary);
+}
+
+.time-range input[type="time"],
+.setting-row input[type="time"] {
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.time-range input[type="time"]:hover,
+.setting-row input[type="time"]:hover {
+    border-color: var(--border-light);
+}
+
+.time-range input[type="time"]:focus,
+.setting-row input[type="time"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(62, 207, 178, 0.15);
+}
+
+.time-range input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    cursor: pointer;
+}
+
 .setting-row input[type="range"] {
     width: 200px;
     height: 8px;

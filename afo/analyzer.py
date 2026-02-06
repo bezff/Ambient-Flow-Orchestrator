@@ -3,7 +3,7 @@
 from datetime import datetime, time
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Callable
 
 from .tracker import ActivityState
 
@@ -26,6 +26,13 @@ class TimeOfDay(Enum):
 
 
 @dataclass
+class ProcrastinationWarning:
+    active: bool = False
+    entertainment_minutes: int = 0
+    message: str = ""
+
+
+@dataclass
 class AnalysisResult:
     mode: UserMode
     confidence: float
@@ -33,6 +40,11 @@ class AnalysisResult:
     work_session_minutes: int
     should_take_break: bool
     recommendations: List[str]
+    procrastination: ProcrastinationWarning = None
+    
+    def __post_init__(self):
+        if self.procrastination is None:
+            self.procrastination = ProcrastinationWarning()
 
 
 class StateAnalyzer:
@@ -74,6 +86,102 @@ class StateAnalyzer:
         self._work_session_start: Optional[datetime] = None
         self._last_mode: UserMode = UserMode.IDLE
         self._mode_history: List[tuple] = []  # (timestamp, mode)
+        
+        # трекинг прокрастинации
+        self._entertainment_start: Optional[datetime] = None
+        self._last_warning_time: Optional[datetime] = None
+        self._warning_callback: Optional[Callable] = None
+        
+        # настройки прокрастинации (будут заданы через set_procrastination_settings)
+        self._procrastination_enabled = True
+        self._work_hours_start = time(9, 0)
+        self._work_hours_end = time(18, 0)
+        self._warning_threshold = 15
+        self._warning_cooldown = 20
+    
+    def set_procrastination_settings(self, enabled: bool, work_start: str, work_end: str,
+                                     threshold_minutes: int, cooldown_minutes: int):
+        self._procrastination_enabled = enabled
+        
+        h, m = map(int, work_start.split(':'))
+        self._work_hours_start = time(h, m)
+        
+        h, m = map(int, work_end.split(':'))
+        self._work_hours_end = time(h, m)
+        
+        self._warning_threshold = threshold_minutes
+        self._warning_cooldown = cooldown_minutes
+    
+    def set_warning_callback(self, callback: Callable):
+        self._warning_callback = callback
+    
+    def _is_work_hours(self) -> bool:
+        now = datetime.now().time()
+        if self._work_hours_start < self._work_hours_end:
+            return self._work_hours_start <= now <= self._work_hours_end
+        # если конец < начала (ночная смена)
+        return now >= self._work_hours_start or now <= self._work_hours_end
+    
+    def _check_procrastination(self, current_mode: UserMode) -> ProcrastinationWarning:
+        if not self._procrastination_enabled:
+            return ProcrastinationWarning()
+        
+        if not self._is_work_hours():
+            self._entertainment_start = None
+            return ProcrastinationWarning()
+        
+        now = datetime.now()
+        
+        if current_mode == UserMode.ENTERTAINMENT:
+            if self._entertainment_start is None:
+                self._entertainment_start = now
+            
+            minutes_in_entertainment = int((now - self._entertainment_start).total_seconds() / 60)
+            
+            if minutes_in_entertainment >= self._warning_threshold:
+                # проверяем cooldown
+                can_warn = True
+                if self._last_warning_time:
+                    since_last = (now - self._last_warning_time).total_seconds() / 60
+                    if since_last < self._warning_cooldown:
+                        can_warn = False
+                
+                if can_warn:
+                    self._last_warning_time = now
+                    
+                    messages = [
+                        f"Уже {minutes_in_entertainment} мин в развлечениях. Пора за работу?",
+                        f"Так {minutes_in_entertainment} минут и пролетели... Может хватит?",
+                        f"Рабочее время идёт, а ты уже {minutes_in_entertainment} мин отдыхаешь",
+                        f"Эй, {minutes_in_entertainment} минут прокрастинации! Давай за дело",
+                    ]
+                    import random
+                    msg = random.choice(messages)
+                    
+                    if self._warning_callback:
+                        self._warning_callback(msg, minutes_in_entertainment)
+                    
+                    return ProcrastinationWarning(
+                        active=True,
+                        entertainment_minutes=minutes_in_entertainment,
+                        message=msg
+                    )
+                
+                return ProcrastinationWarning(
+                    active=False,
+                    entertainment_minutes=minutes_in_entertainment,
+                    message=""
+                )
+            
+            return ProcrastinationWarning(
+                active=False,
+                entertainment_minutes=minutes_in_entertainment,
+                message=""
+            )
+        else:
+            # вышли из развлечений - сбрасываем таймер
+            self._entertainment_start = None
+            return ProcrastinationWarning()
     
     @staticmethod
     def get_time_of_day() -> TimeOfDay:
@@ -233,6 +341,9 @@ class StateAnalyzer:
         should_break = self._should_take_break(work_minutes, break_after_minutes)
         recommendations = self._get_recommendations(mode, time_of_day, work_minutes)
         
+        # прокрастинация
+        procrastination = self._check_procrastination(mode)
+        
         # Сохранить историю
         self._mode_history.append((datetime.now(), mode))
         if len(self._mode_history) > 1000:
@@ -246,5 +357,6 @@ class StateAnalyzer:
             time_of_day=time_of_day,
             work_session_minutes=work_minutes,
             should_take_break=should_break,
-            recommendations=recommendations
+            recommendations=recommendations,
+            procrastination=procrastination
         )

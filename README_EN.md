@@ -20,6 +20,7 @@ When working at a computer, you want everything to be just right: the right back
 - Switches screen to warm mode in the evening
 - Reminds you to take breaks
 - Health reminders — water, stretching, eye rest
+- Procrastination detection — warns when spending too much time in entertainment apps during work hours
 - Auto-start with Windows (configurable in the app)
 
 
@@ -54,6 +55,7 @@ In the app settings there's an "Auto-start" toggle — it will add AFO to Window
 | GET/POST | /api/reminders | reminder settings |
 | POST | /api/reminders/snooze | snooze reminder |
 | POST | /api/reminders/dismiss | mark as done (reset timer) |
+| GET/POST | /api/procrastination | procrastination detection settings |
 
 ## License
 
