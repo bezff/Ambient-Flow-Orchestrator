@@ -22,6 +22,7 @@ When working at a computer, you want everything to be just right: the right back
 - Health reminders — water, stretching, eye rest
 - Procrastination detection — warns when spending too much time in entertainment apps during work hours
 - Pomodoro timer — flexible work/break intervals with visualization and statistics
+- Global hotkeys for quick control
 - Auto-start with Windows (configurable in the app)
 
 
@@ -43,6 +44,15 @@ In the app settings there's an "Auto-start" toggle — it will add AFO to Window
 
 > Only works in exe version
 
+## Hotkeys
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Alt+M` | Toggle ambient sound |
+| `Ctrl+Alt+B` | Start break |
+| `Ctrl+Alt+P` | Start/pause Pomodoro |
+| `Ctrl+Alt+S` | Skip Pomodoro phase |
+
 ## API
 
 | Method | Endpoint | Description |
@@ -62,6 +72,7 @@ In the app settings there's an "Auto-start" toggle — it will add AFO to Window
 | POST | /api/pomodoro/pause | pause/resume |
 | POST | /api/pomodoro/stop | stop timer |
 | POST | /api/pomodoro/skip | skip phase |
+| GET/POST | /api/hotkeys | hotkey settings |
 
 ## License
 

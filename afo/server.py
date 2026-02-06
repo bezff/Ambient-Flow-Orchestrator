@@ -14,6 +14,7 @@ from .environment import EnvironmentController, AmbientSound
 from .config import ConfigManager
 from .reminders import ReminderManager
 from .pomodoro import PomodoroTimer, PomodoroPhase
+from .hotkeys import HotkeyManager
 from . import autostart
 
 
@@ -41,6 +42,7 @@ class APIHandler(SimpleHTTPRequestHandler):
             '/api/pomodoro/pause': self.handle_pomodoro_pause,
             '/api/pomodoro/stop': self.handle_pomodoro_stop,
             '/api/pomodoro/skip': self.handle_pomodoro_skip,
+            '/api/hotkeys': self.handle_hotkeys,
         }
         super().__init__(*args, **kwargs)
     
@@ -526,6 +528,25 @@ class APIHandler(SimpleHTTPRequestHandler):
             self.send_json({'success': True})
         else:
             self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_hotkeys(self, method: str, params: Dict):
+        orch = self.orchestrator
+        
+        if method == 'GET':
+            self.send_json({
+                'available': orch.hotkeys.is_available(),
+                'hotkeys': orch.hotkeys.get_hotkeys()
+            })
+        else:
+            # обновить горячую клавишу
+            action = params.get('action')
+            hotkey = params.get('hotkey')
+            
+            if action and hotkey:
+                orch.hotkeys.set_hotkey(action, hotkey)
+                self.send_json({'success': True})
+            else:
+                self.send_json({'error': 'action and hotkey required'}, 400)
 
 
 class WebServer:
@@ -598,6 +619,13 @@ class Orchestrator:
             on_phase_complete=self._on_pomodoro_phase_complete,
             on_pomodoro_complete=self._on_pomodoro_complete
         )
+        
+        # горячие клавиши
+        self.hotkeys = HotkeyManager()
+        self.hotkeys.set_callback('toggle_sound', self._hotkey_toggle_sound)
+        self.hotkeys.set_callback('start_break', self._hotkey_start_break)
+        self.hotkeys.set_callback('toggle_pomodoro', self._hotkey_toggle_pomodoro)
+        self.hotkeys.set_callback('skip_pomodoro', self._hotkey_skip_pomodoro)
         
         self.running = False
         self._last_analysis: Optional[AnalysisResult] = None
@@ -693,6 +721,7 @@ class Orchestrator:
         self.tracker.start()
         self.server.start()
         self.reminders.start()
+        self.hotkeys.start()
         
         # Запустить цикл анализа
         self._analysis_thread = threading.Thread(target=self._analysis_loop, daemon=True)
@@ -706,9 +735,30 @@ class Orchestrator:
         self.server.stop()
         self.reminders.stop()
         self.environment.reset()
+        self.hotkeys.stop()
         
         if self._analysis_thread:
             self._analysis_thread.join(timeout=2)
+    
+    def _hotkey_toggle_sound(self):
+        if self.environment.state.sound == AmbientSound.NONE:
+            # включить последний или дефолтный
+            self.environment.sound.play(AmbientSound.RAIN)
+        else:
+            self.environment.sound.stop()
+    
+    def _hotkey_start_break(self):
+        self.start_break()
+    
+    def _hotkey_toggle_pomodoro(self):
+        if self.pomodoro.state.running:
+            self.pomodoro.pause()
+        else:
+            self.pomodoro.start()
+    
+    def _hotkey_skip_pomodoro(self):
+        if self.pomodoro.state.phase.value != 'idle':
+            self.pomodoro.skip()
     
     def start_break(self):
         # Начать перерыв

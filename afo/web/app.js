@@ -573,7 +573,7 @@
                 historyEl.innerHTML = data.history.map(item => `
                     <div class="pomodoro-history-item">
                         <span class="pomodoro-history-date">${formatHistoryDate(item.date)}</span>
-                        <span class="pomodoro-history-count">🍅 ${item.pomodoros}</span>
+                        <span class="pomodoro-history-count"><i class="bi bi-alarm"></i> ${item.pomodoros}</span>
                     </div>
                 `).join('');
             }
