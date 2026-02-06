@@ -26,6 +26,10 @@
                     <i class="bi bi-grid-1x2"></i>
                     <span>Обзор</span>
                 </a>
+                <a href="#" class="nav-item" data-page="pomodoro">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Pomodoro</span>
+                </a>
                 <a href="#" class="nav-item" data-page="sounds">
                     <i class="bi bi-music-note-beamed"></i>
                     <span>Звуки</span>
@@ -151,6 +155,128 @@
                         <ul class="recommendations-list" id="recommendationsList">
                             <li class="empty">Нет рекомендаций</li>
                         </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Pomodoro -->
+            <section class="page" id="page-pomodoro">
+                <header class="page-header">
+                    <h1>Pomodoro</h1>
+                </header>
+                
+                <div class="pomodoro-container">
+                    <div class="pomodoro-timer-card">
+                        <div class="pomodoro-phase" id="pomodoroPhase">Готов к работе</div>
+                        
+                        <div class="pomodoro-timer-display">
+                            <svg class="pomodoro-ring" viewBox="0 0 200 200">
+                                <defs>
+                                    <linearGradient id="pomodoroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#3ecfb2"/>
+                                        <stop offset="100%" style="stop-color:#5b8def"/>
+                                    </linearGradient>
+                                </defs>
+                                <circle class="pomodoro-ring-bg" cx="100" cy="100" r="90"/>
+                                <circle class="pomodoro-ring-progress" id="pomodoroRing" cx="100" cy="100" r="90" stroke="url(#pomodoroGradient)"/>
+                            </svg>
+                            <div class="pomodoro-time" id="pomodoroTime">25:00</div>
+                        </div>
+                        
+                        <div class="pomodoro-controls">
+                            <button class="pomodoro-btn pomodoro-btn-main" id="pomodoroStartBtn">
+                                <i class="bi bi-play-fill"></i>
+                            </button>
+                            <button class="pomodoro-btn" id="pomodoroStopBtn" disabled>
+                                <i class="bi bi-stop-fill"></i>
+                            </button>
+                            <button class="pomodoro-btn" id="pomodoroSkipBtn" disabled>
+                                <i class="bi bi-skip-forward-fill"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="pomodoro-counter">
+                            <span id="pomodoroCounter">0</span> / <span id="pomodoroTarget">4</span> до длинного перерыва
+                        </div>
+                    </div>
+                    
+                    <div class="pomodoro-sidebar">
+                        <div class="pomodoro-stats-card">
+                            <h3>Сегодня</h3>
+                            <div class="pomodoro-stat-row">
+                                <span class="pomodoro-stat-icon">🍅</span>
+                                <span class="pomodoro-stat-label">Помидоров</span>
+                                <span class="pomodoro-stat-value" id="pomodoroTodayCount">0</span>
+                            </div>
+                            <div class="pomodoro-stat-row">
+                                <span class="pomodoro-stat-icon">⏱️</span>
+                                <span class="pomodoro-stat-label">Рабочее время</span>
+                                <span class="pomodoro-stat-value" id="pomodoroTodayWork">0 мин</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pomodoro-history-card">
+                            <h3>История</h3>
+                            <div class="pomodoro-history" id="pomodoroHistory">
+                                <div class="empty">Нет данных</div>
+                            </div>
+                        </div>
+                        
+                        <div class="pomodoro-settings-card">
+                            <h3>Настройки таймера</h3>
+                            <div class="pomodoro-setting">
+                                <label>Работа</label>
+                                <select id="pomodoroWorkTime">
+                                    <option value="15">15 мин</option>
+                                    <option value="20">20 мин</option>
+                                    <option value="25" selected>25 мин</option>
+                                    <option value="30">30 мин</option>
+                                    <option value="45">45 мин</option>
+                                    <option value="50">50 мин</option>
+                                </select>
+                            </div>
+                            <div class="pomodoro-setting">
+                                <label>Короткий перерыв</label>
+                                <select id="pomodoroShortBreak">
+                                    <option value="3">3 мин</option>
+                                    <option value="5" selected>5 мин</option>
+                                    <option value="10">10 мин</option>
+                                </select>
+                            </div>
+                            <div class="pomodoro-setting">
+                                <label>Длинный перерыв</label>
+                                <select id="pomodoroLongBreak">
+                                    <option value="10">10 мин</option>
+                                    <option value="15" selected>15 мин</option>
+                                    <option value="20">20 мин</option>
+                                    <option value="30">30 мин</option>
+                                </select>
+                            </div>
+                            <div class="pomodoro-setting">
+                                <label>Помидоров до длинного</label>
+                                <select id="pomodoroCycleLength">
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4" selected>4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+                            <div class="pomodoro-setting pomodoro-setting-toggle">
+                                <label>Авто-старт перерывов</label>
+                                <label class="toggle toggle-small">
+                                    <input type="checkbox" id="pomodoroAutoBreak">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="pomodoro-setting pomodoro-setting-toggle">
+                                <label>Авто-старт работы</label>
+                                <label class="toggle toggle-small">
+                                    <input type="checkbox" id="pomodoroAutoWork">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

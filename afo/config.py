@@ -84,6 +84,18 @@ class ProcrastinationSettings:
     cooldown_minutes: int = 20
 
 
+@dataclass
+class PomodoroSettings:
+    enabled: bool = True
+    work_minutes: int = 25
+    short_break_minutes: int = 5
+    long_break_minutes: int = 15
+    pomodoros_until_long_break: int = 4
+    auto_start_breaks: bool = False
+    auto_start_work: bool = False
+    play_sound: bool = True
+
+
 @dataclass 
 class ReminderSettings:
     # настройки напоминалок
@@ -141,6 +153,7 @@ class Config:
     tracking: TrackingSettings = None
     reminders: ReminderSettings = None
     procrastination: ProcrastinationSettings = None
+    pomodoro: PomodoroSettings = None
     blocked_sites: List[str] = None
     work_apps: List[str] = None
     entertainment_apps: List[str] = None
@@ -160,6 +173,8 @@ class Config:
             self.reminders = ReminderSettings()
         if self.procrastination is None:
             self.procrastination = ProcrastinationSettings()
+        if self.pomodoro is None:
+            self.pomodoro = PomodoroSettings()
         if self.blocked_sites is None:
             self.blocked_sites = [
                 'youtube.com', 'twitter.com', 'x.com', 'reddit.com', 'tiktok.com', 
@@ -277,6 +292,7 @@ class ConfigManager:
             tracking=TrackingSettings(**data.get('tracking', {})),
             reminders=reminders,
             procrastination=ProcrastinationSettings(**data.get('procrastination', {})),
+            pomodoro=PomodoroSettings(**data.get('pomodoro', {})),
             blocked_sites=data.get('blocked_sites'),
             work_apps=data.get('work_apps'),
             entertainment_apps=data.get('entertainment_apps')
@@ -292,6 +308,7 @@ class ConfigManager:
             'tracking': asdict(self.config.tracking),
             'reminders': asdict(self.config.reminders),
             'procrastination': asdict(self.config.procrastination),
+            'pomodoro': asdict(self.config.pomodoro),
             'blocked_sites': self.config.blocked_sites,
             'work_apps': self.config.work_apps,
             'entertainment_apps': self.config.entertainment_apps

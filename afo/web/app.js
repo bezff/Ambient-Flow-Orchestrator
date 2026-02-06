@@ -20,6 +20,7 @@
         config: null,
         remindersConfig: null,
         procrastinationConfig: null,
+        pomodoroData: null,
         currentSound: 'none',
         breakActive: false,
         breakTimer: null,
@@ -146,6 +147,9 @@
 
         // Settings toggles
         bindSettingsEvents();
+        
+        // Pomodoro
+        bindPomodoroEvents();
     }
 
     function bindSettingsEvents() {
@@ -290,6 +294,10 @@
 
         if (page === 'stats') {
             loadStats();
+        }
+        
+        if (page === 'pomodoro') {
+            loadPomodoroData();
         }
     }
 
@@ -453,6 +461,229 @@
         if (workStart) workStart.value = config.work_hours_start;
         if (workEnd) workEnd.value = config.work_hours_end;
         if (threshold) threshold.value = config.warning_threshold_minutes;
+    }
+    
+    // =============================
+    // Pomodoro
+    // =============================
+    
+    let pomodoroPolling = null;
+    
+    async function loadPomodoroData() {
+        const data = await fetchAPI('/api/pomodoro');
+        if (data) {
+            state.pomodoroData = data;
+            updatePomodoroUI();
+        }
+    }
+    
+    async function pomodoroAction(action, params = {}) {
+        await fetchAPI('/api/pomodoro/' + action, {
+            method: 'POST',
+            body: JSON.stringify(params)
+        });
+        loadPomodoroData();
+    }
+    
+    async function updatePomodoroSettings(params) {
+        await fetchAPI('/api/pomodoro', {
+            method: 'POST',
+            body: JSON.stringify(params)
+        });
+        loadPomodoroData();
+    }
+    
+    function updatePomodoroUI() {
+        const data = state.pomodoroData;
+        if (!data) return;
+        
+        const phaseEl = document.getElementById('pomodoroPhase');
+        const timeEl = document.getElementById('pomodoroTime');
+        const ringEl = document.getElementById('pomodoroRing');
+        const startBtn = document.getElementById('pomodoroStartBtn');
+        const stopBtn = document.getElementById('pomodoroStopBtn');
+        const skipBtn = document.getElementById('pomodoroSkipBtn');
+        const counterEl = document.getElementById('pomodoroCounter');
+        const targetEl = document.getElementById('pomodoroTarget');
+        const todayCountEl = document.getElementById('pomodoroTodayCount');
+        const todayWorkEl = document.getElementById('pomodoroTodayWork');
+        const historyEl = document.getElementById('pomodoroHistory');
+        
+        // фаза
+        const phaseNames = {
+            'idle': 'Готов к работе',
+            'work': 'Работа',
+            'short_break': 'Короткий перерыв',
+            'long_break': 'Длинный перерыв'
+        };
+        
+        if (phaseEl) {
+            phaseEl.textContent = phaseNames[data.phase] || data.phase;
+            phaseEl.className = 'pomodoro-phase';
+            if (data.phase === 'work') phaseEl.classList.add('work');
+            if (data.phase.includes('break')) phaseEl.classList.add('break');
+        }
+        
+        // время
+        if (timeEl) {
+            const mins = Math.floor(data.seconds_left / 60);
+            const secs = data.seconds_left % 60;
+            timeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // кольцо прогресса
+        if (ringEl) {
+            let totalSeconds = data.settings.work_minutes * 60;
+            if (data.phase === 'short_break') totalSeconds = data.settings.short_break_minutes * 60;
+            if (data.phase === 'long_break') totalSeconds = data.settings.long_break_minutes * 60;
+            
+            const circumference = 2 * Math.PI * 90;
+            const progress = totalSeconds > 0 ? (totalSeconds - data.seconds_left) / totalSeconds : 0;
+            ringEl.style.strokeDasharray = circumference;
+            ringEl.style.strokeDashoffset = circumference * (1 - progress);
+        }
+        
+        // кнопки
+        if (startBtn) {
+            if (data.running) {
+                startBtn.innerHTML = '<i class="bi bi-pause-fill"></i>';
+                startBtn.classList.add('running');
+            } else {
+                startBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
+                startBtn.classList.remove('running');
+            }
+        }
+        
+        if (stopBtn) stopBtn.disabled = data.phase === 'idle';
+        if (skipBtn) skipBtn.disabled = data.phase === 'idle';
+        
+        // счётчик
+        if (counterEl) counterEl.textContent = data.current_pomodoro;
+        if (targetEl) targetEl.textContent = data.settings.pomodoros_until_long_break;
+        
+        // статистика
+        if (todayCountEl) todayCountEl.textContent = data.completed_today;
+        if (todayWorkEl) todayWorkEl.textContent = data.total_work_minutes + ' мин';
+        
+        // история
+        if (historyEl && data.history) {
+            if (data.history.length === 0) {
+                historyEl.innerHTML = '<div class="empty">Нет данных</div>';
+            } else {
+                historyEl.innerHTML = data.history.map(item => `
+                    <div class="pomodoro-history-item">
+                        <span class="pomodoro-history-date">${formatHistoryDate(item.date)}</span>
+                        <span class="pomodoro-history-count">🍅 ${item.pomodoros}</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // настройки
+        const workTimeEl = document.getElementById('pomodoroWorkTime');
+        const shortBreakEl = document.getElementById('pomodoroShortBreak');
+        const longBreakEl = document.getElementById('pomodoroLongBreak');
+        const cycleLengthEl = document.getElementById('pomodoroCycleLength');
+        const autoBreakEl = document.getElementById('pomodoroAutoBreak');
+        const autoWorkEl = document.getElementById('pomodoroAutoWork');
+        
+        if (workTimeEl) workTimeEl.value = data.settings.work_minutes;
+        if (shortBreakEl) shortBreakEl.value = data.settings.short_break_minutes;
+        if (longBreakEl) longBreakEl.value = data.settings.long_break_minutes;
+        if (cycleLengthEl) cycleLengthEl.value = data.settings.pomodoros_until_long_break;
+        if (autoBreakEl) autoBreakEl.checked = data.settings.auto_start_breaks;
+        if (autoWorkEl) autoWorkEl.checked = data.settings.auto_start_work;
+    }
+    
+    function formatHistoryDate(dateStr) {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        if (dateStr === today.toISOString().split('T')[0]) return 'Сегодня';
+        if (dateStr === yesterday.toISOString().split('T')[0]) return 'Вчера';
+        
+        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+    
+    function startPomodoroPolling() {
+        if (pomodoroPolling) return;
+        pomodoroPolling = setInterval(() => {
+            if (state.pomodoroData && state.pomodoroData.running) {
+                loadPomodoroData();
+            }
+        }, 1000);
+    }
+    
+    function bindPomodoroEvents() {
+        const startBtn = document.getElementById('pomodoroStartBtn');
+        const stopBtn = document.getElementById('pomodoroStopBtn');
+        const skipBtn = document.getElementById('pomodoroSkipBtn');
+        
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                if (state.pomodoroData?.running) {
+                    pomodoroAction('pause');
+                } else {
+                    pomodoroAction('start');
+                }
+            });
+        }
+        
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => pomodoroAction('stop'));
+        }
+        
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => pomodoroAction('skip'));
+        }
+        
+        // настройки
+        const workTimeEl = document.getElementById('pomodoroWorkTime');
+        const shortBreakEl = document.getElementById('pomodoroShortBreak');
+        const longBreakEl = document.getElementById('pomodoroLongBreak');
+        const cycleLengthEl = document.getElementById('pomodoroCycleLength');
+        const autoBreakEl = document.getElementById('pomodoroAutoBreak');
+        const autoWorkEl = document.getElementById('pomodoroAutoWork');
+        
+        if (workTimeEl) {
+            workTimeEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ work_minutes: parseInt(e.target.value) });
+            });
+        }
+        
+        if (shortBreakEl) {
+            shortBreakEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ short_break_minutes: parseInt(e.target.value) });
+            });
+        }
+        
+        if (longBreakEl) {
+            longBreakEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ long_break_minutes: parseInt(e.target.value) });
+            });
+        }
+        
+        if (cycleLengthEl) {
+            cycleLengthEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ pomodoros_until_long_break: parseInt(e.target.value) });
+            });
+        }
+        
+        if (autoBreakEl) {
+            autoBreakEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ auto_start_breaks: e.target.checked });
+            });
+        }
+        
+        if (autoWorkEl) {
+            autoWorkEl.addEventListener('change', (e) => {
+                updatePomodoroSettings({ auto_start_work: e.target.checked });
+            });
+        }
+        
+        startPomodoroPolling();
     }
     
     async function snoozeReminder(reminderId, minutes = 10) {

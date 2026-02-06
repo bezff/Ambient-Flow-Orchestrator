@@ -13,6 +13,7 @@ from .analyzer import StateAnalyzer, AnalysisResult
 from .environment import EnvironmentController, AmbientSound
 from .config import ConfigManager
 from .reminders import ReminderManager
+from .pomodoro import PomodoroTimer, PomodoroPhase
 from . import autostart
 
 
@@ -35,6 +36,11 @@ class APIHandler(SimpleHTTPRequestHandler):
             '/api/reminders/snooze': self.handle_reminder_snooze,
             '/api/reminders/dismiss': self.handle_reminder_dismiss,
             '/api/procrastination': self.handle_procrastination,
+            '/api/pomodoro': self.handle_pomodoro,
+            '/api/pomodoro/start': self.handle_pomodoro_start,
+            '/api/pomodoro/pause': self.handle_pomodoro_pause,
+            '/api/pomodoro/stop': self.handle_pomodoro_stop,
+            '/api/pomodoro/skip': self.handle_pomodoro_skip,
         }
         super().__init__(*args, **kwargs)
     
@@ -456,6 +462,70 @@ class APIHandler(SimpleHTTPRequestHandler):
             )
             
             self.send_json({'success': True})
+    
+    def handle_pomodoro(self, method: str, params: Dict):
+        orch = self.orchestrator
+        
+        if method == 'GET':
+            status = orch.pomodoro.get_status()
+            status['history'] = orch.pomodoro.get_history(7)
+            self.send_json(status)
+        else:
+            # обновить настройки
+            p = orch.config.config.pomodoro
+            
+            if 'work_minutes' in params:
+                p.work_minutes = params['work_minutes']
+            if 'short_break_minutes' in params:
+                p.short_break_minutes = params['short_break_minutes']
+            if 'long_break_minutes' in params:
+                p.long_break_minutes = params['long_break_minutes']
+            if 'pomodoros_until_long_break' in params:
+                p.pomodoros_until_long_break = params['pomodoros_until_long_break']
+            if 'auto_start_breaks' in params:
+                p.auto_start_breaks = params['auto_start_breaks']
+            if 'auto_start_work' in params:
+                p.auto_start_work = params['auto_start_work']
+            
+            orch.config.save()
+            orch.pomodoro.update_settings(p)
+            
+            self.send_json({'success': True})
+    
+    def handle_pomodoro_start(self, method: str, params: Dict):
+        if method == 'POST':
+            phase = params.get('phase')
+            if phase:
+                phase = PomodoroPhase(phase)
+            self.orchestrator.pomodoro.start(phase)
+            self.send_json({'success': True})
+        else:
+            self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_pomodoro_pause(self, method: str, params: Dict):
+        if method == 'POST':
+            pom = self.orchestrator.pomodoro
+            if pom.state.running:
+                pom.pause()
+            else:
+                pom.resume()
+            self.send_json({'success': True, 'running': pom.state.running})
+        else:
+            self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_pomodoro_stop(self, method: str, params: Dict):
+        if method == 'POST':
+            self.orchestrator.pomodoro.stop()
+            self.send_json({'success': True})
+        else:
+            self.send_json({'error': 'POST only'}, 405)
+    
+    def handle_pomodoro_skip(self, method: str, params: Dict):
+        if method == 'POST':
+            self.orchestrator.pomodoro.skip()
+            self.send_json({'success': True})
+        else:
+            self.send_json({'error': 'POST only'}, 405)
 
 
 class WebServer:
@@ -522,6 +592,13 @@ class Orchestrator:
         )
         self.analyzer.set_warning_callback(self._on_procrastination_warning)
         
+        # pomodoro таймер
+        self.pomodoro = PomodoroTimer(self.config.config.pomodoro)
+        self.pomodoro.set_callbacks(
+            on_phase_complete=self._on_pomodoro_phase_complete,
+            on_pomodoro_complete=self._on_pomodoro_complete
+        )
+        
         self.running = False
         self._last_analysis: Optional[AnalysisResult] = None
         self._analysis_thread: Optional[threading.Thread] = None
@@ -538,10 +615,40 @@ class Orchestrator:
         })
         if len(self._pending_reminders) > 5:
             self._pending_reminders.pop(0)
+    
+    def _on_pomodoro_phase_complete(self, prev_phase: PomodoroPhase, next_phase: PomodoroPhase):
+        phase_names = {
+            PomodoroPhase.WORK: 'работы',
+            PomodoroPhase.SHORT_BREAK: 'перерыва',
+            PomodoroPhase.LONG_BREAK: 'длинного перерыва',
+        }
+        next_names = {
+            PomodoroPhase.WORK: 'Пора работать!',
+            PomodoroPhase.SHORT_BREAK: 'Короткий перерыв',
+            PomodoroPhase.LONG_BREAK: 'Длинный перерыв — отдохни хорошенько!',
+        }
         
-        self.running = False
-        self._last_analysis: Optional[AnalysisResult] = None
-        self._analysis_thread: Optional[threading.Thread] = None
+        msg = f"Время {phase_names.get(prev_phase, '')} закончилось. {next_names.get(next_phase, '')}"
+        
+        self._pending_reminders.append({
+            'id': 'pomodoro',
+            'name': 'Pomodoro',
+            'message': msg,
+            'icon': 'clock',
+            'timestamp': __import__('time').time(),
+            'type': 'pomodoro'
+        })
+        if len(self._pending_reminders) > 5:
+            self._pending_reminders.pop(0)
+    
+    def _on_pomodoro_complete(self, total_today: int):
+        messages = [
+            f"Помидорка #{total_today} готова! Так держать!",
+            f"Ещё один помидор! Уже {total_today} за сегодня",
+            f"Отлично! {total_today}-й помидор в копилке",
+        ]
+        import random
+        msg = random.choice(messages)
     
     def _on_reminder(self, reminder):
         # колбэк когда пора показать напоминание

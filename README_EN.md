@@ -21,6 +21,7 @@ When working at a computer, you want everything to be just right: the right back
 - Reminds you to take breaks
 - Health reminders — water, stretching, eye rest
 - Procrastination detection — warns when spending too much time in entertainment apps during work hours
+- Pomodoro timer — flexible work/break intervals with visualization and statistics
 - Auto-start with Windows (configurable in the app)
 
 
@@ -56,6 +57,11 @@ In the app settings there's an "Auto-start" toggle — it will add AFO to Window
 | POST | /api/reminders/snooze | snooze reminder |
 | POST | /api/reminders/dismiss | mark as done (reset timer) |
 | GET/POST | /api/procrastination | procrastination detection settings |
+| GET/POST | /api/pomodoro | pomodoro status and settings |
+| POST | /api/pomodoro/start | start timer |
+| POST | /api/pomodoro/pause | pause/resume |
+| POST | /api/pomodoro/stop | stop timer |
+| POST | /api/pomodoro/skip | skip phase |
 
 ## License
 
